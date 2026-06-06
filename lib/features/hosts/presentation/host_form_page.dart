@@ -177,7 +177,7 @@ class _HostFormPageState extends State<HostFormPage> {
             _SectionCard(
               icon: Icons.lock_outline_rounded,
               title: 'Authentication',
-              caption: 'Credentials are stored in the platform secure enclave.',
+              caption: 'Credentials are stored in platform secure storage.',
               children: [
                 SegmentedButton<SshAuthMethod>(
                   segments: const [
