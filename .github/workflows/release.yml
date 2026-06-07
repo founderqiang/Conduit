@@ -44,8 +44,12 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           if [[ -z "${ANDROID_KEYSTORE_BASE64}" ]]; then
-            echo "ANDROID_KEYSTORE_BASE64 is not set; release APKs will be unsigned."
-            exit 0
+            if [[ -n "${ACT:-}" ]]; then
+              echo "ANDROID_KEYSTORE_BASE64 is not set; local act run will build unsigned APKs."
+              exit 0
+            fi
+            echo "::error::ANDROID_KEYSTORE_BASE64 must be set for signed release APKs."
+            exit 1
           fi
 
           required=(
@@ -75,12 +79,19 @@ jobs:
         id: metadata
         shell: bash
         run: |
-          timestamp="$(date -u +'%Y.%m.%d-%H%M')"
-          short_sha="$(git rev-parse --short=7 HEAD)"
-          tag="v${timestamp}-${short_sha}"
+          pubspec_version="$(sed -n 's/^version:[[:space:]]*//p' pubspec.yaml | head -n 1)"
+          app_version="${pubspec_version%%+*}"
+          version_code="${pubspec_version##*+}"
+          if [[ -z "${app_version}" || -z "${version_code}" || "${app_version}" == "${version_code}" ]]; then
+            echo "::error::pubspec.yaml version must use Flutter's versionName+versionCode format."
+            exit 1
+          fi
+          tag="v${app_version}"
           {
             echo "tag=${tag}"
             echo "name=Release ${tag}"
+            echo "version=${app_version}"
+            echo "version_code=${version_code}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Show local release metadata
