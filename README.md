@@ -6,6 +6,7 @@
 ![Platforms](https://img.shields.io/badge/platforms-Android%20%7C%20iOS-2ea44f)
 [![App Store](https://img.shields.io/badge/App%20Store-Conduit-0D96F6?logo=appstore&logoColor=white)](https://apps.apple.com/app/id6780054869)
 [![F-Droid](https://img.shields.io/f-droid/v/com.gwitko.conduit?label=F-Droid&logo=fdroid)](https://f-droid.org/packages/com.gwitko.conduit/)
+[![Obtainium](https://img.shields.io/badge/Obtainium-GitHub%20releases-6f42c1)](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/gwitko/Conduit)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Conduit-ff5f5f?logo=kofi&logoColor=white)](https://ko-fi.com/gwitko)
 [![Stars](https://img.shields.io/github/stars/gwitko/Conduit)](https://github.com/gwitko/Conduit/stargazers)
 
