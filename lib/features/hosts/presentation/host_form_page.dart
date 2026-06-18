@@ -35,6 +35,7 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _showPassphrase = false;
   bool _useMosh = false;
   bool _predictiveEchoEnabled = false;
+  bool _forwardAgent = false;
   List<String> _tags = const [];
 
   bool get _isEditing => widget.host != null;
@@ -57,6 +58,7 @@ class _HostFormPageState extends State<HostFormPage> {
       _useMosh = host.useMosh;
       _moshLocaleController.text = host.moshLocale;
       _predictiveEchoEnabled = host.predictiveEchoEnabled;
+      _forwardAgent = host.forwardAgent;
     }
   }
 
@@ -274,6 +276,21 @@ class _HostFormPageState extends State<HostFormPage> {
                       obscureText: !_showPassphrase,
                     ),
                   ],
+                  const SizedBox(height: 4),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Forward SSH agent'),
+                      subtitle: const Text(
+                        'Let hosts you connect to use this key to authenticate '
+                        'onward. Hardware keys prompt for a touch on each use.',
+                      ),
+                      value: _forwardAgent,
+                      onChanged: (value) =>
+                          setState(() => _forwardAgent = value),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -435,6 +452,10 @@ class _HostFormPageState extends State<HostFormPage> {
               _authMethod == SshAuthMethod.hardwareKey)
           ? _passphraseController.text
           : '',
+      forwardAgent:
+          (_authMethod == SshAuthMethod.privateKey ||
+              _authMethod == SshAuthMethod.hardwareKey) &&
+          _forwardAgent,
       tags: _tags,
       connectionTimeoutSeconds: int.parse(_timeoutController.text),
       useMosh: _useMosh,
