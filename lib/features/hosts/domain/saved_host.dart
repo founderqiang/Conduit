@@ -11,6 +11,7 @@ class SavedHost {
     this.password = '',
     this.privateKey = '',
     this.passphrase = '',
+    this.forwardAgent = false,
     this.tags = const [],
     this.connectionTimeoutSeconds = 12,
     this.useMosh = false,
@@ -28,6 +29,7 @@ class SavedHost {
   final String password;
   final String privateKey;
   final String passphrase;
+  final bool forwardAgent;
   final List<String> tags;
   final int connectionTimeoutSeconds;
   final bool useMosh;
@@ -62,6 +64,7 @@ class SavedHost {
     String? password,
     String? privateKey,
     String? passphrase,
+    bool? forwardAgent,
     List<String>? tags,
     int? connectionTimeoutSeconds,
     bool? useMosh,
@@ -80,6 +83,7 @@ class SavedHost {
       password: password ?? this.password,
       privateKey: privateKey ?? this.privateKey,
       passphrase: passphrase ?? this.passphrase,
+      forwardAgent: forwardAgent ?? this.forwardAgent,
       tags: tags ?? this.tags,
       connectionTimeoutSeconds:
           connectionTimeoutSeconds ?? this.connectionTimeoutSeconds,
@@ -104,6 +108,7 @@ class SavedHost {
       'password': password,
       'privateKey': privateKey,
       'passphrase': passphrase,
+      'forwardAgent': forwardAgent,
       'tags': tags,
       'connectionTimeoutSeconds': connectionTimeoutSeconds,
       'useMosh': useMosh,
@@ -136,6 +141,7 @@ class SavedHost {
       password: json['password'] as String? ?? '',
       privateKey: json['privateKey'] as String? ?? '',
       passphrase: json['passphrase'] as String? ?? '',
+      forwardAgent: json['forwardAgent'] as bool? ?? false,
       tags: tags,
       connectionTimeoutSeconds: json['connectionTimeoutSeconds'] as int? ?? 12,
       useMosh: json['useMosh'] as bool? ?? false,

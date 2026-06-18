@@ -579,9 +579,18 @@ void main() {
         find.widgetWithText(TextFormField, 'Private key'),
         _fakeSecurityKeyPem(),
       );
-      await tester.drag(find.byType(ListView), const Offset(0, -1200));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Add machine'));
+      final listPosition =
+          ((find.byType(Scrollable).evaluate().first as StatefulElement).state
+                  as ScrollableState)
+              .position;
+      final addButton = find.text('Add machine');
+      for (var i = 0; i < 40 && addButton.evaluate().isEmpty; i++) {
+        listPosition.jumpTo(
+          (listPosition.pixels + 200).clamp(0.0, listPosition.maxScrollExtent),
+        );
+        await tester.pump();
+      }
+      await tester.tap(addButton);
       await tester.pumpAndSettle();
 
       expect(
@@ -776,6 +785,107 @@ void main() {
 
       expect(identities, hasLength(1));
       expect(identities!.single, isA<OpenSSHSecurityKeyPair>());
+    });
+  });
+
+  group('SshClientFactory agent forwarding', () {
+    SshClientFactory privateKeyFactory() => SshClientFactory(
+      _NoopVerifier(),
+      keyPairParser: (_, _) => [
+        OpenSSHEd25519KeyPair(
+          Uint8List.fromList(List<int>.filled(32, 1)),
+          Uint8List.fromList(List<int>.filled(64, 2)),
+          'normal key',
+        ),
+      ],
+    );
+
+    SshClientFactory hardwareKeyFactory() => SshClientFactory(
+      _NoopVerifier(),
+      keyPairParser: (_, _) => [
+        OpenSSHSecurityKeyEd25519KeyPair(
+          publicKey: Uint8List.fromList(List<int>.filled(32, 3)),
+          application: 'ssh:',
+          flags: 0x01,
+          keyHandle: Uint8List.fromList([0xAA]),
+          reserved: '',
+        ),
+      ],
+    );
+
+    test('no handler for password auth', () {
+      final factory = privateKeyFactory();
+      expect(
+        factory.agentHandlerForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.password,
+            password: 'secret',
+            forwardAgent: true,
+          ),
+        ),
+        isNull,
+      );
+    });
+
+    test('no handler when forwarding disabled', () {
+      final factory = privateKeyFactory();
+      expect(
+        factory.agentHandlerForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.privateKey,
+            privateKey: 'normal openssh key',
+          ),
+        ),
+        isNull,
+      );
+    });
+
+    test('attaches key-pair agent for private key auth', () {
+      final factory = privateKeyFactory();
+      expect(
+        factory.agentHandlerForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.privateKey,
+            privateKey: 'normal openssh key',
+            forwardAgent: true,
+          ),
+        ),
+        isA<SSHKeyPairAgent>(),
+      );
+    });
+
+    test('attaches key-pair agent for hardware key auth', () {
+      final factory = hardwareKeyFactory();
+      expect(
+        factory.agentHandlerForTesting(
+          const SavedHost(
+            id: 'id',
+            name: 'Host',
+            host: 'example.com',
+            port: 22,
+            username: 'root',
+            authMethod: SshAuthMethod.hardwareKey,
+            privateKey: 'openssh sk key',
+            forwardAgent: true,
+          ),
+        ),
+        isA<SSHKeyPairAgent>(),
+      );
     });
   });
 

@@ -1,4 +1,4 @@
-# Conduit
+# Conduit: SSH, Mosh & SFTP
 
 [![Latest release](https://img.shields.io/github/v/release/gwitko/Conduit)](https://github.com/gwitko/Conduit/releases/latest)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
@@ -36,6 +36,9 @@ Dart implementation of the protocol, and the terminal is
 - OpenSSH FIDO security-key auth for `ed25519-sk` and `ecdsa-sk` credentials,
   tested with YubiKey and designed for CTAP-compatible keys.
 - Android hardware-key auth over USB or NFC; iOS hardware-key auth over NFC.
+- Optional per-host SSH agent forwarding for private-key and hardware-key auth,
+  so a remote host can use your key to reach further hosts; forwarded hardware
+  keys still require a touch for every onward signature.
 - Trusted host key management with explicit fingerprint review.
 - On-screen terminal controls for modifiers, arrows, function keys, and common shell input.
 - Optional device-auth app lock for protecting saved machines and credentials.

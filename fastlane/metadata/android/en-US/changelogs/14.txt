@@ -1,0 +1,3 @@
+SSH agent forwarding: connect to a host and let it use your key to reach further hosts. Enable it per host under private key or hardware key auth.
+
+Hardware keys stay touch-protected when forwarded, so every onward signature still needs a deliberate tap on your security key.

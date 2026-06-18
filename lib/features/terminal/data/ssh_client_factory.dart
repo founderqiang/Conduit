@@ -39,10 +39,12 @@ class SshClientFactory {
         host.port,
         timeout: Duration(seconds: host.connectionTimeoutSeconds),
       );
+      final identities = _identitiesFor(host);
       return SSHClient(
         socket,
         username: host.username.trim(),
-        identities: _identitiesFor(host),
+        identities: identities,
+        agentHandler: _agentHandlerFor(host, identities),
         onPasswordRequest: _passwordRequestFor(host),
         onUserInfoRequest: _userInfoRequestFor(host),
         onVerifyHostKey: (type, fingerprint) {
@@ -100,6 +102,20 @@ class SshClientFactory {
   @visibleForTesting
   List<SSHKeyPair>? identitiesForTesting(SavedHost host) =>
       _identitiesFor(host);
+
+  SSHAgentHandler? _agentHandlerFor(
+    SavedHost host,
+    List<SSHKeyPair>? identities,
+  ) {
+    if (!host.forwardAgent || identities == null || identities.isEmpty) {
+      return null;
+    }
+    return SSHKeyPairAgent(identities);
+  }
+
+  @visibleForTesting
+  SSHAgentHandler? agentHandlerForTesting(SavedHost host) =>
+      _agentHandlerFor(host, _identitiesFor(host));
 
   String Function()? _passwordRequestFor(SavedHost host) {
     return host.authMethod == SshAuthMethod.password
