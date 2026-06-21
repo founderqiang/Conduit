@@ -131,10 +131,16 @@ class TerminalKeyboardBar extends StatelessWidget {
         brightness: brightness,
         onPressed: _paste,
       ),
-      TerminalKeyboardAction.functionKeys => _FunctionKeysMenu(
+      TerminalKeyboardAction.functionKeys => _MenuKey<TerminalKey>(
+        label: 'Fn',
+        tooltip: 'Function keys',
         palette: palette,
         brightness: brightness,
-        onSelected: (key) => _sendKey(key),
+        onSelected: _sendKey,
+        items: [
+          for (final item in _functionKeys)
+            PopupMenuItem(value: item.key, child: Text(item.label)),
+        ],
       ),
       TerminalKeyboardAction.tmuxPrefix => _Key(
         label: action.label,
@@ -142,10 +148,25 @@ class TerminalKeyboardBar extends StatelessWidget {
         brightness: brightness,
         onPressed: _sendTmuxPrefix,
       ),
-      TerminalKeyboardAction.tmuxMenu => _TmuxKeysMenu(
+      TerminalKeyboardAction.tmuxMenu => _MenuKey<_TmuxAction>(
+        label: 'Tmux+',
+        tooltip: 'Tmux actions',
         palette: palette,
         brightness: brightness,
         onSelected: _triggerTmuxAction,
+        items: [
+          for (final action in _TmuxAction.values)
+            PopupMenuItem(
+              value: action,
+              child: Row(
+                children: [
+                  Icon(action.icon, size: 18),
+                  const SizedBox(width: 10),
+                  Text(action.label),
+                ],
+              ),
+            ),
+        ],
       ),
       _ => _Key(
         label: action.label,
@@ -202,44 +223,15 @@ class TerminalKeyboardBar extends StatelessWidget {
   }
 
   void _triggerTmuxAction(_TmuxAction action) {
-    switch (action) {
-      case _TmuxAction.newWindow:
-        _sendTmuxText('c');
-      case _TmuxAction.previousWindow:
-        _sendTmuxText('p');
-      case _TmuxAction.nextWindow:
-        _sendTmuxText('n');
-      case _TmuxAction.windowList:
-        _sendTmuxText('w');
-      case _TmuxAction.lastWindow:
-        _sendTmuxText('l');
-      case _TmuxAction.renameWindow:
-        _sendTmuxText(',');
-      case _TmuxAction.splitHorizontal:
-        _sendTmuxText('"');
-      case _TmuxAction.splitVertical:
-        _sendTmuxText('%');
-      case _TmuxAction.paneLeft:
-        _sendTmuxKey(TerminalKey.arrowLeft);
-      case _TmuxAction.paneRight:
-        _sendTmuxKey(TerminalKey.arrowRight);
-      case _TmuxAction.paneUp:
-        _sendTmuxKey(TerminalKey.arrowUp);
-      case _TmuxAction.paneDown:
-        _sendTmuxKey(TerminalKey.arrowDown);
-      case _TmuxAction.zoomPane:
-        _sendTmuxText('z');
-      case _TmuxAction.commandPrompt:
-        _sendTmuxText(':');
-      case _TmuxAction.copyMode:
-        _sendTmuxText('[');
-        onEnterTmuxScrollMode();
-      case _TmuxAction.closePane:
-        _sendTmuxText('x');
-      case _TmuxAction.closeWindow:
-        _sendTmuxText('&');
-      case _TmuxAction.detach:
-        _sendTmuxText('d');
+    _sendTmuxPrefix();
+    final key = action.key;
+    if (key != null) {
+      controller.sendKey(key);
+    } else if (action.text != null) {
+      controller.sendText(action.text!);
+    }
+    if (action.entersScrollMode) {
+      onEnterTmuxScrollMode();
     }
     _focusTerminal();
   }
@@ -255,19 +247,10 @@ class TerminalKeyboardBar extends StatelessWidget {
   }
 
   void _sendTmuxPrefix() {
-    controller.sendControl(_terminalKeyForTmuxPrefix(tmuxPrefixKey));
-    _focusTerminal();
-  }
-
-  void _sendTmuxText(String text) {
-    _sendTmuxPrefix();
-    controller.sendText(text);
-    _focusTerminal();
-  }
-
-  void _sendTmuxKey(TerminalKey key) {
-    _sendTmuxPrefix();
-    controller.sendKey(key);
+    controller.sendControl(switch (tmuxPrefixKey) {
+      TmuxPrefixKey.controlB => TerminalKey.keyB,
+      TmuxPrefixKey.controlA => TerminalKey.keyA,
+    });
     _focusTerminal();
   }
 
@@ -293,76 +276,79 @@ class TerminalKeyboardBar extends StatelessWidget {
 }
 
 enum _TmuxAction {
-  newWindow,
-  previousWindow,
-  nextWindow,
-  windowList,
-  lastWindow,
-  renameWindow,
-  splitHorizontal,
-  splitVertical,
-  paneLeft,
-  paneRight,
-  paneUp,
-  paneDown,
-  zoomPane,
-  commandPrompt,
-  copyMode,
-  closePane,
-  closeWindow,
-  detach,
+  newWindow('New window', Icons.add_box_rounded, text: 'c'),
+  previousWindow('Previous window', Icons.skip_previous_rounded, text: 'p'),
+  nextWindow('Next window', Icons.skip_next_rounded, text: 'n'),
+  windowList('Window list', Icons.view_list_rounded, text: 'w'),
+  lastWindow('Last window', Icons.history_rounded, text: 'l'),
+  renameWindow(
+    'Rename window',
+    Icons.drive_file_rename_outline_rounded,
+    text: ',',
+  ),
+  splitHorizontal('Split horizontal', Icons.splitscreen_rounded, text: '"'),
+  splitVertical('Split vertical', Icons.vertical_split_rounded, text: '%'),
+  paneLeft(
+    'Pane left',
+    Icons.keyboard_arrow_left_rounded,
+    key: TerminalKey.arrowLeft,
+  ),
+  paneRight(
+    'Pane right',
+    Icons.keyboard_arrow_right_rounded,
+    key: TerminalKey.arrowRight,
+  ),
+  paneUp('Pane up', Icons.keyboard_arrow_up_rounded, key: TerminalKey.arrowUp),
+  paneDown(
+    'Pane down',
+    Icons.keyboard_arrow_down_rounded,
+    key: TerminalKey.arrowDown,
+  ),
+  zoomPane('Zoom pane', Icons.zoom_out_map_rounded, text: 'z'),
+  commandPrompt(
+    'Command prompt',
+    Icons.keyboard_command_key_rounded,
+    text: ':',
+  ),
+  copyMode(
+    'Scrollback',
+    Icons.swap_vert_rounded,
+    text: '[',
+    entersScrollMode: true,
+  ),
+  closePane('Close pane', Icons.close_fullscreen_rounded, text: 'x'),
+  closeWindow('Close window', Icons.disabled_by_default_rounded, text: '&'),
+  detach('Detach', Icons.logout_rounded, text: 'd');
+
+  const _TmuxAction(
+    this.label,
+    this.icon, {
+    this.text,
+    this.key,
+    this.entersScrollMode = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final String? text;
+  final TerminalKey? key;
+  final bool entersScrollMode;
 }
 
-TerminalKey _terminalKeyForTmuxPrefix(TmuxPrefixKey prefixKey) {
-  return switch (prefixKey) {
-    TmuxPrefixKey.controlB => TerminalKey.keyB,
-    TmuxPrefixKey.controlA => TerminalKey.keyA,
-  };
-}
-
-extension _TmuxActionDetails on _TmuxAction {
-  String get label => switch (this) {
-    _TmuxAction.newWindow => 'New window',
-    _TmuxAction.previousWindow => 'Previous window',
-    _TmuxAction.nextWindow => 'Next window',
-    _TmuxAction.windowList => 'Window list',
-    _TmuxAction.lastWindow => 'Last window',
-    _TmuxAction.renameWindow => 'Rename window',
-    _TmuxAction.splitHorizontal => 'Split horizontal',
-    _TmuxAction.splitVertical => 'Split vertical',
-    _TmuxAction.paneLeft => 'Pane left',
-    _TmuxAction.paneRight => 'Pane right',
-    _TmuxAction.paneUp => 'Pane up',
-    _TmuxAction.paneDown => 'Pane down',
-    _TmuxAction.zoomPane => 'Zoom pane',
-    _TmuxAction.commandPrompt => 'Command prompt',
-    _TmuxAction.copyMode => 'Scrollback',
-    _TmuxAction.closePane => 'Close pane',
-    _TmuxAction.closeWindow => 'Close window',
-    _TmuxAction.detach => 'Detach',
-  };
-
-  IconData get icon => switch (this) {
-    _TmuxAction.newWindow => Icons.add_box_rounded,
-    _TmuxAction.previousWindow => Icons.skip_previous_rounded,
-    _TmuxAction.nextWindow => Icons.skip_next_rounded,
-    _TmuxAction.windowList => Icons.view_list_rounded,
-    _TmuxAction.lastWindow => Icons.history_rounded,
-    _TmuxAction.renameWindow => Icons.drive_file_rename_outline_rounded,
-    _TmuxAction.splitHorizontal => Icons.splitscreen_rounded,
-    _TmuxAction.splitVertical => Icons.vertical_split_rounded,
-    _TmuxAction.paneLeft => Icons.keyboard_arrow_left_rounded,
-    _TmuxAction.paneRight => Icons.keyboard_arrow_right_rounded,
-    _TmuxAction.paneUp => Icons.keyboard_arrow_up_rounded,
-    _TmuxAction.paneDown => Icons.keyboard_arrow_down_rounded,
-    _TmuxAction.zoomPane => Icons.zoom_out_map_rounded,
-    _TmuxAction.commandPrompt => Icons.keyboard_command_key_rounded,
-    _TmuxAction.copyMode => Icons.swap_vert_rounded,
-    _TmuxAction.closePane => Icons.close_fullscreen_rounded,
-    _TmuxAction.closeWindow => Icons.disabled_by_default_rounded,
-    _TmuxAction.detach => Icons.logout_rounded,
-  };
-}
+const _functionKeys = [
+  (label: 'F1', key: TerminalKey.f1),
+  (label: 'F2', key: TerminalKey.f2),
+  (label: 'F3', key: TerminalKey.f3),
+  (label: 'F4', key: TerminalKey.f4),
+  (label: 'F5', key: TerminalKey.f5),
+  (label: 'F6', key: TerminalKey.f6),
+  (label: 'F7', key: TerminalKey.f7),
+  (label: 'F8', key: TerminalKey.f8),
+  (label: 'F9', key: TerminalKey.f9),
+  (label: 'F10', key: TerminalKey.f10),
+  (label: 'F11', key: TerminalKey.f11),
+  (label: 'F12', key: TerminalKey.f12),
+];
 
 class _Key extends StatelessWidget {
   const _Key({
@@ -487,100 +473,34 @@ class _ToggleKey extends StatelessWidget {
   }
 }
 
-class _FunctionKeysMenu extends StatelessWidget {
-  const _FunctionKeysMenu({
+class _MenuKey<T> extends StatelessWidget {
+  const _MenuKey({
+    required this.label,
+    required this.tooltip,
+    required this.items,
+    required this.onSelected,
     required this.palette,
     required this.brightness,
-    required this.onSelected,
   });
 
+  final String label;
+  final String tooltip;
+  final List<PopupMenuEntry<T>> items;
+  final ValueChanged<T> onSelected;
   final AppPalette palette;
   final Brightness brightness;
-  final ValueChanged<TerminalKey> onSelected;
-
-  static const _keys = [
-    (label: 'F1', key: TerminalKey.f1),
-    (label: 'F2', key: TerminalKey.f2),
-    (label: 'F3', key: TerminalKey.f3),
-    (label: 'F4', key: TerminalKey.f4),
-    (label: 'F5', key: TerminalKey.f5),
-    (label: 'F6', key: TerminalKey.f6),
-    (label: 'F7', key: TerminalKey.f7),
-    (label: 'F8', key: TerminalKey.f8),
-    (label: 'F9', key: TerminalKey.f9),
-    (label: 'F10', key: TerminalKey.f10),
-    (label: 'F11', key: TerminalKey.f11),
-    (label: 'F12', key: TerminalKey.f12),
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: PopupMenuButton<TerminalKey>(
-        tooltip: 'Function keys',
+      child: PopupMenuButton<T>(
+        tooltip: tooltip,
         onSelected: onSelected,
-        itemBuilder: (context) => [
-          for (final item in _keys)
-            PopupMenuItem(value: item.key, child: Text(item.label)),
-        ],
-        child: Container(
-          width: 44,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: palette.panelFor(brightness),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: palette.hairlineFor(brightness)),
-          ),
-          child: Text(
-            'Fn',
-            style: TextStyle(
-              color: palette.foregroundFor(brightness),
-              fontSize: 12.5,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TmuxKeysMenu extends StatelessWidget {
-  const _TmuxKeysMenu({
-    required this.palette,
-    required this.brightness,
-    required this.onSelected,
-  });
-
-  final AppPalette palette;
-  final Brightness brightness;
-  final ValueChanged<_TmuxAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: PopupMenuButton<_TmuxAction>(
-        tooltip: 'Tmux actions',
-        onSelected: onSelected,
-        itemBuilder: (context) => [
-          for (final action in _TmuxAction.values)
-            PopupMenuItem(
-              value: action,
-              child: Row(
-                children: [
-                  Icon(action.icon, size: 18),
-                  const SizedBox(width: 10),
-                  Text(action.label),
-                ],
-              ),
-            ),
-        ],
+        itemBuilder: (context) => items,
         child: Container(
           height: 36,
-          constraints: const BoxConstraints(minWidth: 58),
+          constraints: const BoxConstraints(minWidth: 44),
           padding: const EdgeInsets.symmetric(horizontal: 10),
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -589,7 +509,7 @@ class _TmuxKeysMenu extends StatelessWidget {
             border: Border.all(color: palette.hairlineFor(brightness)),
           ),
           child: Text(
-            'Tmux+',
+            label,
             style: TextStyle(
               color: palette.foregroundFor(brightness),
               fontSize: 12.5,

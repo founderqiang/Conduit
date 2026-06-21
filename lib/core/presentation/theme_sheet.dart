@@ -293,11 +293,11 @@ Future<void> _showKeyboardActionsEditor(
                         ),
                         TextButton(
                           onPressed: () => setState(() {
-                            for (final action in tmuxTerminalKeyboardActions) {
-                              if (!selected.contains(action)) {
-                                selected.add(action);
-                              }
-                            }
+                            selected.addAll(
+                              tmuxTerminalKeyboardActions.where(
+                                (action) => !selected.contains(action),
+                              ),
+                            );
                           }),
                           child: const Text('Tmux'),
                         ),

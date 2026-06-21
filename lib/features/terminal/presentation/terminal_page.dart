@@ -389,12 +389,7 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
                   child: _TmuxScrollOverlay(
                     palette: widget.palette,
                     brightness: widget.brightness,
-                    onPageUp: () => widget.session.sendKey(TerminalKey.pageUp),
-                    onPageDown: () =>
-                        widget.session.sendKey(TerminalKey.pageDown),
-                    onLineUp: () => widget.session.sendKey(TerminalKey.arrowUp),
-                    onLineDown: () =>
-                        widget.session.sendKey(TerminalKey.arrowDown),
+                    onKey: widget.session.sendKey,
                     onExit: () {
                       widget.session.sendKey(TerminalKey.escape);
                       widget.onExitTmuxScrollMode();
@@ -413,19 +408,13 @@ class _TmuxScrollOverlay extends StatelessWidget {
   const _TmuxScrollOverlay({
     required this.palette,
     required this.brightness,
-    required this.onPageUp,
-    required this.onPageDown,
-    required this.onLineUp,
-    required this.onLineDown,
+    required this.onKey,
     required this.onExit,
   });
 
   final AppPalette palette;
   final Brightness brightness;
-  final VoidCallback onPageUp;
-  final VoidCallback onPageDown;
-  final VoidCallback onLineUp;
-  final VoidCallback onLineDown;
+  final ValueChanged<TerminalKey> onKey;
   final VoidCallback onExit;
 
   @override
@@ -435,60 +424,57 @@ class _TmuxScrollOverlay extends StatelessWidget {
       palette.canvasFor(brightness).withValues(alpha: 0.92),
     );
     final foreground = palette.foregroundFor(brightness);
-    return IgnorePointer(
-      ignoring: false,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: palette.accent.withValues(alpha: 0.45)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _TmuxScrollButton(
-                tooltip: 'Line up',
-                icon: Icons.keyboard_arrow_up_rounded,
-                foreground: foreground,
-                onPressed: onLineUp,
-              ),
-              _TmuxScrollButton(
-                tooltip: 'Page up',
-                icon: Icons.vertical_align_top_rounded,
-                foreground: foreground,
-                onPressed: onPageUp,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  'tmux scroll',
-                  style: TextStyle(
-                    color: foreground,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                  ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: palette.accent.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _TmuxScrollButton(
+              tooltip: 'Line up',
+              icon: Icons.keyboard_arrow_up_rounded,
+              foreground: foreground,
+              onPressed: () => onKey(TerminalKey.arrowUp),
+            ),
+            _TmuxScrollButton(
+              tooltip: 'Page up',
+              icon: Icons.vertical_align_top_rounded,
+              foreground: foreground,
+              onPressed: () => onKey(TerminalKey.pageUp),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                'tmux scroll',
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              _TmuxScrollButton(
-                tooltip: 'Page down',
-                icon: Icons.vertical_align_bottom_rounded,
-                foreground: foreground,
-                onPressed: onPageDown,
-              ),
-              _TmuxScrollButton(
-                tooltip: 'Line down',
-                icon: Icons.keyboard_arrow_down_rounded,
-                foreground: foreground,
-                onPressed: onLineDown,
-              ),
-              const SizedBox(width: 4),
-              TextButton(onPressed: onExit, child: const Text('Exit')),
-            ],
-          ),
+            ),
+            _TmuxScrollButton(
+              tooltip: 'Page down',
+              icon: Icons.vertical_align_bottom_rounded,
+              foreground: foreground,
+              onPressed: () => onKey(TerminalKey.pageDown),
+            ),
+            _TmuxScrollButton(
+              tooltip: 'Line down',
+              icon: Icons.keyboard_arrow_down_rounded,
+              foreground: foreground,
+              onPressed: () => onKey(TerminalKey.arrowDown),
+            ),
+            const SizedBox(width: 4),
+            TextButton(onPressed: onExit, child: const Text('Exit')),
+          ],
         ),
       ),
     );
