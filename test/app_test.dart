@@ -563,6 +563,8 @@ void main() {
         useMosh: true,
         moshLocale: 'en_US.UTF-8',
         predictiveEchoEnabled: false,
+        startTmuxOnConnect: true,
+        tmuxPrefixKey: TmuxPrefixKey.controlA,
         lastConnectedAt: DateTime.parse('2025-01-02T03:04:05Z'),
       );
 
@@ -584,7 +586,24 @@ void main() {
       expect(decoded.useMosh, original.useMosh);
       expect(decoded.moshLocale, original.moshLocale);
       expect(decoded.predictiveEchoEnabled, original.predictiveEchoEnabled);
+      expect(decoded.startTmuxOnConnect, original.startTmuxOnConnect);
+      expect(decoded.tmuxPrefixKey, original.tmuxPrefixKey);
       expect(decoded.lastConnectedAt, original.lastConnectedAt);
+    });
+
+    test('older saved hosts default to no tmux start with Ctrl-B', () {
+      final decoded = SavedHost.fromJson(const {
+        'id': 'id',
+        'name': 'Legacy Host',
+        'host': 'example.com',
+        'port': 22,
+        'username': 'root',
+        'authMethod': 'password',
+        'password': 'secret',
+      });
+
+      expect(decoded.startTmuxOnConnect, isFalse);
+      expect(decoded.tmuxPrefixKey, TmuxPrefixKey.controlB);
     });
 
     test('preserves hardware key auth method', () {
@@ -643,6 +662,8 @@ void main() {
         await tester.pump();
       }
       await tester.tap(addButton);
+      await tester.pumpAndSettle();
+      listPosition.jumpTo(0);
       await tester.pumpAndSettle();
 
       expect(

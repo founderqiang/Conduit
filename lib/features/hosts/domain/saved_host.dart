@@ -1,5 +1,16 @@
 enum SshAuthMethod { password, privateKey, hardwareKey }
 
+enum TmuxPrefixKey { controlB, controlA }
+
+const defaultTmuxPrefixKey = TmuxPrefixKey.controlB;
+
+extension TmuxPrefixKeyDetails on TmuxPrefixKey {
+  String get label => switch (this) {
+    TmuxPrefixKey.controlB => 'Ctrl-B',
+    TmuxPrefixKey.controlA => 'Ctrl-A',
+  };
+}
+
 class SavedHost {
   const SavedHost({
     required this.id,
@@ -17,6 +28,8 @@ class SavedHost {
     this.useMosh = false,
     this.moshLocale = 'C.UTF-8',
     this.predictiveEchoEnabled = false,
+    this.startTmuxOnConnect = false,
+    this.tmuxPrefixKey = defaultTmuxPrefixKey,
     this.lastConnectedAt,
   });
 
@@ -35,6 +48,8 @@ class SavedHost {
   final bool useMosh;
   final String moshLocale;
   final bool predictiveEchoEnabled;
+  final bool startTmuxOnConnect;
+  final TmuxPrefixKey tmuxPrefixKey;
   final DateTime? lastConnectedAt;
 
   bool get isValid =>
@@ -70,6 +85,8 @@ class SavedHost {
     bool? useMosh,
     String? moshLocale,
     bool? predictiveEchoEnabled,
+    bool? startTmuxOnConnect,
+    TmuxPrefixKey? tmuxPrefixKey,
     DateTime? lastConnectedAt,
     bool clearLastConnectedAt = false,
   }) {
@@ -91,6 +108,8 @@ class SavedHost {
       moshLocale: moshLocale ?? this.moshLocale,
       predictiveEchoEnabled:
           predictiveEchoEnabled ?? this.predictiveEchoEnabled,
+      startTmuxOnConnect: startTmuxOnConnect ?? this.startTmuxOnConnect,
+      tmuxPrefixKey: tmuxPrefixKey ?? this.tmuxPrefixKey,
       lastConnectedAt: clearLastConnectedAt
           ? null
           : lastConnectedAt ?? this.lastConnectedAt,
@@ -114,6 +133,8 @@ class SavedHost {
       'useMosh': useMosh,
       'moshLocale': moshLocale,
       'predictiveEchoEnabled': predictiveEchoEnabled,
+      'startTmuxOnConnect': startTmuxOnConnect,
+      'tmuxPrefixKey': tmuxPrefixKey.name,
       'lastConnectedAt': lastConnectedAt?.toIso8601String(),
     };
   }
@@ -149,6 +170,11 @@ class SavedHost {
           ? (json['moshLocale'] as String).trim()
           : 'C.UTF-8',
       predictiveEchoEnabled: json['predictiveEchoEnabled'] as bool? ?? false,
+      startTmuxOnConnect: json['startTmuxOnConnect'] as bool? ?? false,
+      tmuxPrefixKey: TmuxPrefixKey.values.firstWhere(
+        (key) => key.name == json['tmuxPrefixKey'],
+        orElse: () => defaultTmuxPrefixKey,
+      ),
       lastConnectedAt: lastConnectedAtRaw == null
           ? null
           : DateTime.tryParse(lastConnectedAtRaw),

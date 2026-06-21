@@ -65,6 +65,7 @@ class TerminalSessionController extends ChangeNotifier {
   int? _lastIosEnterOutputMs;
 
   static const _iosDuplicateEnterWindow = Duration(milliseconds: 80);
+  static const _startTmuxCommand = 'tmux new-session -A -s conduit\r';
 
   TerminalConnectionStatus get status => _status;
   String get title => _title.isEmpty ? host.name : _title;
@@ -192,6 +193,7 @@ class TerminalSessionController extends ChangeNotifier {
 
       _status = TerminalConnectionStatus.connected;
       notifyListeners();
+      _startTmuxIfConfigured(session);
     } on AppFailure catch (failure) {
       if (_disposed || generation != _connectionGeneration) {
         return;
@@ -263,6 +265,17 @@ class TerminalSessionController extends ChangeNotifier {
   void paste(String text) {
     terminal.paste(text);
     keyboard.clearModifiers();
+  }
+
+  void _startTmuxIfConfigured(SshTerminalSession session) {
+    if (!host.startTmuxOnConnect) {
+      return;
+    }
+    unawaited(
+      session
+          .send(utf8.encode(_startTmuxCommand))
+          .catchError(_handleStreamError),
+    );
   }
 
   void _configureTerminal() {

@@ -38,6 +38,8 @@ class _HostFormPageState extends State<HostFormPage> {
   bool _useMosh = false;
   bool _predictiveEchoEnabled = false;
   bool _forwardAgent = false;
+  bool _startTmuxOnConnect = false;
+  TmuxPrefixKey _tmuxPrefixKey = defaultTmuxPrefixKey;
   List<String> _tags = const [];
 
   bool get _isEditing => widget.host != null;
@@ -61,6 +63,8 @@ class _HostFormPageState extends State<HostFormPage> {
       _moshLocaleController.text = host.moshLocale;
       _predictiveEchoEnabled = host.predictiveEchoEnabled;
       _forwardAgent = host.forwardAgent;
+      _startTmuxOnConnect = host.startTmuxOnConnect;
+      _tmuxPrefixKey = host.tmuxPrefixKey;
     }
   }
 
@@ -157,6 +161,8 @@ class _HostFormPageState extends State<HostFormPage> {
               moshLocaleController: _moshLocaleController,
               useMosh: _useMosh,
               predictiveEchoEnabled: _predictiveEchoEnabled,
+              startTmuxOnConnect: _startTmuxOnConnect,
+              tmuxPrefixKey: _tmuxPrefixKey,
               timeoutValidator: _validateTimeout,
               onAddTag: _addTag,
               onRemoveTag: _removeTag,
@@ -168,6 +174,10 @@ class _HostFormPageState extends State<HostFormPage> {
               }),
               onPredictiveEchoChanged: (value) =>
                   setState(() => _predictiveEchoEnabled = value),
+              onStartTmuxOnConnectChanged: (value) =>
+                  setState(() => _startTmuxOnConnect = value),
+              onTmuxPrefixKeyChanged: (value) =>
+                  setState(() => _tmuxPrefixKey = value),
             ),
             const SizedBox(height: 22),
             SizedBox(
@@ -263,6 +273,8 @@ class _HostFormPageState extends State<HostFormPage> {
           ? 'C.UTF-8'
           : _moshLocaleController.text.trim(),
       predictiveEchoEnabled: _predictiveEchoEnabled,
+      startTmuxOnConnect: _startTmuxOnConnect,
+      tmuxPrefixKey: _tmuxPrefixKey,
       lastConnectedAt: currentHost?.lastConnectedAt,
     );
 

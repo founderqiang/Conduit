@@ -32,6 +32,7 @@ class _TerminalPageState extends State<TerminalPage> {
   final _focusNode = FocusNode();
   TerminalSessionController? _focusedSession;
   bool _fullscreen = false;
+  bool _tmuxScrollMode = false;
 
   @override
   void initState() {
@@ -64,6 +65,9 @@ class _TerminalPageState extends State<TerminalPage> {
     final active = widget.workspace.activeSession;
     if (active == null || active == _focusedSession) return;
     _focusedSession = active;
+    if (_tmuxScrollMode) {
+      setState(() => _tmuxScrollMode = false);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -166,6 +170,12 @@ class _TerminalPageState extends State<TerminalPage> {
                                 focusNode: session == activeSession
                                     ? _focusNode
                                     : null,
+                                tmuxScrollMode:
+                                    session == activeSession && _tmuxScrollMode,
+                                onExitTmuxScrollMode: () {
+                                  setState(() => _tmuxScrollMode = false);
+                                  _focusNode.requestFocus();
+                                },
                               ),
                           ],
                         ),
@@ -179,6 +189,11 @@ class _TerminalPageState extends State<TerminalPage> {
                       actions: widget.themeController.terminalKeyboardActions,
                       fullscreen: _fullscreen,
                       onToggleFullscreen: _toggleFullscreen,
+                      tmuxPrefixKey: activeSession.host.tmuxPrefixKey,
+                      onEnterTmuxScrollMode: () {
+                        setState(() => _tmuxScrollMode = true);
+                        _focusNode.requestFocus();
+                      },
                     ),
                   ],
                 ),
@@ -201,6 +216,8 @@ class _TerminalSurface extends StatefulWidget {
     required this.onFontSizeChanged,
     required this.predictiveEchoEnabled,
     required this.focusNode,
+    required this.tmuxScrollMode,
+    required this.onExitTmuxScrollMode,
     super.key,
   });
 
@@ -212,6 +229,8 @@ class _TerminalSurface extends StatefulWidget {
   final ValueChanged<double> onFontSizeChanged;
   final bool predictiveEchoEnabled;
   final FocusNode? focusNode;
+  final bool tmuxScrollMode;
+  final VoidCallback onExitTmuxScrollMode;
 
   @override
   State<_TerminalSurface> createState() => _TerminalSurfaceState();
@@ -221,6 +240,7 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   final _pinchPointers = <int, Offset>{};
   double? _pinchStartDistance;
   double? _pinchStartFontSize;
+  double _tmuxScrollDelta = 0;
 
   @override
   void initState() {
@@ -247,6 +267,9 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   }
 
   void _handlePointerDown(PointerDownEvent event) {
+    if (widget.tmuxScrollMode) {
+      return;
+    }
     _pinchPointers[event.pointer] = event.localPosition;
     if (_pinchPointers.length == 2) {
       _pinchStartDistance = _pinchDistance;
@@ -255,6 +278,9 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   }
 
   void _handlePointerMove(PointerMoveEvent event) {
+    if (widget.tmuxScrollMode) {
+      return;
+    }
     if (!_pinchPointers.containsKey(event.pointer)) {
       return;
     }
@@ -271,11 +297,42 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
   }
 
   void _handlePointerEnd(PointerEvent event) {
+    if (widget.tmuxScrollMode) {
+      return;
+    }
     _pinchPointers.remove(event.pointer);
     if (_pinchPointers.length < 2) {
       _pinchStartDistance = null;
       _pinchStartFontSize = null;
     }
+  }
+
+  void _handleTmuxScrollDrag(DragUpdateDetails details) {
+    _tmuxScrollDelta += details.primaryDelta ?? 0;
+    const step = 28.0;
+    while (_tmuxScrollDelta.abs() >= step) {
+      if (_tmuxScrollDelta > 0) {
+        widget.session.sendKey(TerminalKey.arrowUp);
+        _tmuxScrollDelta -= step;
+      } else {
+        widget.session.sendKey(TerminalKey.arrowDown);
+        _tmuxScrollDelta += step;
+      }
+    }
+  }
+
+  void _handleTmuxScrollEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity.abs() < 700) {
+      _tmuxScrollDelta = 0;
+      return;
+    }
+    final key = velocity > 0 ? TerminalKey.pageUp : TerminalKey.pageDown;
+    final pages = (velocity.abs() / 900).clamp(1, 4).round();
+    for (var index = 0; index < pages; index += 1) {
+      widget.session.sendKey(key);
+    }
+    _tmuxScrollDelta = 0;
   }
 
   double get _pinchDistance {
@@ -295,33 +352,170 @@ class _TerminalSurfaceState extends State<_TerminalSurface> {
         onPointerMove: _handlePointerMove,
         onPointerUp: _handlePointerEnd,
         onPointerCancel: _handlePointerEnd,
-        child: ListenableBuilder(
-          listenable: widget.session.terminalPaintListenable,
-          builder: (context, _) {
-            final overlays = widget.session.overlays;
-            return TerminalView(
-              widget.session.terminal,
-              focusNode: widget.focusNode,
-              autofocus: widget.focusNode != null,
-              deleteDetection: true,
-              keyboardType: TextInputType.visiblePassword,
-              keyboardAppearance: Brightness.dark,
-              theme: widget.palette.terminalThemeFor(widget.brightness),
-              overlays: overlays,
-              textStyle: TerminalStyle(
-                fontFamily: widget.fontFamily,
-                fontSize: widget.fontSize,
+        child: Stack(
+          children: [
+            ListenableBuilder(
+              listenable: widget.session.terminalPaintListenable,
+              builder: (context, _) {
+                final overlays = widget.session.overlays;
+                return TerminalView(
+                  widget.session.terminal,
+                  focusNode: widget.focusNode,
+                  autofocus: widget.focusNode != null,
+                  deleteDetection: true,
+                  keyboardType: TextInputType.visiblePassword,
+                  keyboardAppearance: Brightness.dark,
+                  theme: widget.palette.terminalThemeFor(widget.brightness),
+                  overlays: overlays,
+                  textStyle: TerminalStyle(
+                    fontFamily: widget.fontFamily,
+                    fontSize: widget.fontSize,
+                  ),
+                  padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
+                  cursorType: overlays.isEmpty
+                      ? TerminalCursorType.block
+                      : TerminalCursorType.verticalBar,
+                  alwaysShowCursor: true,
+                  simulateScroll: !widget.tmuxScrollMode,
+                );
+              },
+            ),
+            if (widget.tmuxScrollMode)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onVerticalDragUpdate: _handleTmuxScrollDrag,
+                  onVerticalDragEnd: _handleTmuxScrollEnd,
+                  child: _TmuxScrollOverlay(
+                    palette: widget.palette,
+                    brightness: widget.brightness,
+                    onPageUp: () => widget.session.sendKey(TerminalKey.pageUp),
+                    onPageDown: () =>
+                        widget.session.sendKey(TerminalKey.pageDown),
+                    onLineUp: () => widget.session.sendKey(TerminalKey.arrowUp),
+                    onLineDown: () =>
+                        widget.session.sendKey(TerminalKey.arrowDown),
+                    onExit: () {
+                      widget.session.sendKey(TerminalKey.escape);
+                      widget.onExitTmuxScrollMode();
+                    },
+                  ),
+                ),
               ),
-              padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
-              cursorType: overlays.isEmpty
-                  ? TerminalCursorType.block
-                  : TerminalCursorType.verticalBar,
-              alwaysShowCursor: true,
-              simulateScroll: true,
-            );
-          },
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _TmuxScrollOverlay extends StatelessWidget {
+  const _TmuxScrollOverlay({
+    required this.palette,
+    required this.brightness,
+    required this.onPageUp,
+    required this.onPageDown,
+    required this.onLineUp,
+    required this.onLineDown,
+    required this.onExit,
+  });
+
+  final AppPalette palette;
+  final Brightness brightness;
+  final VoidCallback onPageUp;
+  final VoidCallback onPageDown;
+  final VoidCallback onLineUp;
+  final VoidCallback onLineDown;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = Color.alphaBlend(
+      palette.accent.withValues(alpha: 0.16),
+      palette.canvasFor(brightness).withValues(alpha: 0.92),
+    );
+    final foreground = palette.foregroundFor(brightness);
+    return IgnorePointer(
+      ignoring: false,
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: palette.accent.withValues(alpha: 0.45)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _TmuxScrollButton(
+                tooltip: 'Line up',
+                icon: Icons.keyboard_arrow_up_rounded,
+                foreground: foreground,
+                onPressed: onLineUp,
+              ),
+              _TmuxScrollButton(
+                tooltip: 'Page up',
+                icon: Icons.vertical_align_top_rounded,
+                foreground: foreground,
+                onPressed: onPageUp,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'tmux scroll',
+                  style: TextStyle(
+                    color: foreground,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _TmuxScrollButton(
+                tooltip: 'Page down',
+                icon: Icons.vertical_align_bottom_rounded,
+                foreground: foreground,
+                onPressed: onPageDown,
+              ),
+              _TmuxScrollButton(
+                tooltip: 'Line down',
+                icon: Icons.keyboard_arrow_down_rounded,
+                foreground: foreground,
+                onPressed: onLineDown,
+              ),
+              const SizedBox(width: 4),
+              TextButton(onPressed: onExit, child: const Text('Exit')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TmuxScrollButton extends StatelessWidget {
+  const _TmuxScrollButton({
+    required this.tooltip,
+    required this.icon,
+    required this.foreground,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color foreground;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      color: foreground,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, size: 20),
+      onPressed: onPressed,
     );
   }
 }

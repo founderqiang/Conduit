@@ -52,6 +52,8 @@ enum TerminalKeyboardAction {
   dash,
   paste,
   functionKeys,
+  tmuxPrefix,
+  tmuxMenu,
 }
 
 const defaultTerminalKeyboardActions = [
@@ -77,6 +79,8 @@ const defaultTerminalKeyboardActions = [
   TerminalKeyboardAction.pageUp,
   TerminalKeyboardAction.pageDown,
   TerminalKeyboardAction.functionKeys,
+  TerminalKeyboardAction.tmuxPrefix,
+  TerminalKeyboardAction.tmuxMenu,
   TerminalKeyboardAction.fullscreen,
 ];
 
@@ -106,6 +110,11 @@ const legacyDefaultTerminalKeyboardActions = [
   TerminalKeyboardAction.functionKeys,
 ];
 
+const tmuxTerminalKeyboardActions = [
+  TerminalKeyboardAction.tmuxPrefix,
+  TerminalKeyboardAction.tmuxMenu,
+];
+
 extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
   String get label => switch (this) {
     TerminalKeyboardAction.escape => 'Esc',
@@ -131,5 +140,7 @@ extension TerminalKeyboardActionDetails on TerminalKeyboardAction {
     TerminalKeyboardAction.dash => '-',
     TerminalKeyboardAction.paste => 'Paste',
     TerminalKeyboardAction.functionKeys => 'Fn',
+    TerminalKeyboardAction.tmuxPrefix => 'Tmux',
+    TerminalKeyboardAction.tmuxMenu => 'Tmux+',
   };
 }

@@ -291,6 +291,16 @@ Future<void> _showKeyboardActionsEditor(
                           }),
                           child: const Text('Reset'),
                         ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            for (final action in tmuxTerminalKeyboardActions) {
+                              if (!selected.contains(action)) {
+                                selected.add(action);
+                              }
+                            }
+                          }),
+                          child: const Text('Tmux'),
+                        ),
                         IconButton(
                           tooltip: 'Close',
                           onPressed: () => Navigator.of(context).pop(),
@@ -434,6 +444,8 @@ IconData _keyboardActionIcon(TerminalKeyboardAction action) {
     TerminalKeyboardAction.dash => Icons.text_fields_rounded,
     TerminalKeyboardAction.paste => Icons.content_paste_rounded,
     TerminalKeyboardAction.functionKeys => Icons.keyboard_rounded,
+    TerminalKeyboardAction.tmuxPrefix => Icons.keyboard_command_key_rounded,
+    TerminalKeyboardAction.tmuxMenu => Icons.view_quilt_rounded,
   };
 }
 

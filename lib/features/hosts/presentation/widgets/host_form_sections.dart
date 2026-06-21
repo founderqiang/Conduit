@@ -230,11 +230,15 @@ class _HostAdvancedSection extends StatelessWidget {
     required this.moshLocaleController,
     required this.useMosh,
     required this.predictiveEchoEnabled,
+    required this.startTmuxOnConnect,
+    required this.tmuxPrefixKey,
     required this.timeoutValidator,
     required this.onAddTag,
     required this.onRemoveTag,
     required this.onUseMoshChanged,
     required this.onPredictiveEchoChanged,
+    required this.onStartTmuxOnConnectChanged,
+    required this.onTmuxPrefixKeyChanged,
   });
 
   final List<String> tags;
@@ -244,11 +248,15 @@ class _HostAdvancedSection extends StatelessWidget {
   final TextEditingController moshLocaleController;
   final bool useMosh;
   final bool predictiveEchoEnabled;
+  final bool startTmuxOnConnect;
+  final TmuxPrefixKey tmuxPrefixKey;
   final FormFieldValidator<String> timeoutValidator;
   final ValueChanged<String> onAddTag;
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<bool> onUseMoshChanged;
   final ValueChanged<bool> onPredictiveEchoChanged;
+  final ValueChanged<bool> onStartTmuxOnConnectChanged;
+  final ValueChanged<TmuxPrefixKey> onTmuxPrefixKeyChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +325,37 @@ class _HostAdvancedSection extends StatelessWidget {
             ),
           ),
         ],
+        const SizedBox(height: 16),
+        Material(
+          color: Colors.transparent,
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Start tmux on connect'),
+            subtitle: const Text(
+              'Attach to an existing tmux session, or create one if needed.',
+            ),
+            value: startTmuxOnConnect,
+            onChanged: onStartTmuxOnConnectChanged,
+          ),
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<TmuxPrefixKey>(
+          initialValue: tmuxPrefixKey,
+          decoration: const InputDecoration(
+            labelText: 'Tmux prefix',
+            helperText: 'Used by the Tmux and Tmux+ key-row buttons.',
+            prefixIcon: Icon(Icons.keyboard_command_key_rounded),
+          ),
+          items: [
+            for (final key in TmuxPrefixKey.values)
+              DropdownMenuItem(value: key, child: Text(key.label)),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              onTmuxPrefixKeyChanged(value);
+            }
+          },
+        ),
       ],
     );
   }
