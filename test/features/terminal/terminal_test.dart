@@ -279,20 +279,16 @@ void main() {
       final key = find.byIcon(Icons.keyboard_arrow_down_rounded);
       final gesture = await tester.press(key);
 
-      expect(controller.sentKeys, [TerminalKey.arrowDown]);
+      expect(controller.sentKeys, isEmpty);
 
       await tester.pump(const Duration(milliseconds: 249));
-      expect(controller.sentKeys, [TerminalKey.arrowDown]);
+      expect(controller.sentKeys, isEmpty);
 
       await tester.pump(const Duration(milliseconds: 1));
-      expect(controller.sentKeys, [
-        TerminalKey.arrowDown,
-        TerminalKey.arrowDown,
-      ]);
+      expect(controller.sentKeys, [TerminalKey.arrowDown]);
 
       await tester.pump(const Duration(milliseconds: 60));
       expect(controller.sentKeys, [
-        TerminalKey.arrowDown,
         TerminalKey.arrowDown,
         TerminalKey.arrowDown,
       ]);
@@ -302,8 +298,62 @@ void main() {
       expect(controller.sentKeys, [
         TerminalKey.arrowDown,
         TerminalKey.arrowDown,
-        TerminalKey.arrowDown,
       ]);
+    });
+
+    testWidgets('does not send a keyboard row key while scrolling', (
+      tester,
+    ) async {
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalKeyboardBar(
+              controller: controller,
+              focusNode: focusNode,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              items: const [
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.control),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.controlC),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.controlD),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxPrefix),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.tmuxMenu),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.pageDown),
+                TerminalKeyboardItem.builtIn(TerminalKeyboardAction.arrowRight),
+              ],
+              fullscreen: false,
+              onToggleFullscreen: () {},
+              onEnterTmuxScrollMode: () {},
+              tmuxPrefixKey: TmuxPrefixKey.controlB,
+            ),
+          ),
+        ),
+      );
+
+      final gesture = await tester.startGesture(
+        tester.getCenter(find.text('^C')),
+      );
+      await gesture.moveBy(const Offset(-60, 0));
+      await tester.pump();
+      await gesture.up();
+
+      expect(controller.sentControlKeys, isEmpty);
+      expect(controller.sentKeys, isEmpty);
+      expect(controller.sentText, isEmpty);
+
+      final toggleGesture = await tester.startGesture(
+        tester.getCenter(find.text('Ctrl')),
+      );
+      await toggleGesture.moveBy(const Offset(-60, 0));
+      await tester.pump();
+      await toggleGesture.up();
+
+      expect(controller.keyboard.ctrl, isFalse);
     });
 
     testWidgets('sends custom keyboard row items', (tester) async {
