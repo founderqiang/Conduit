@@ -5,4 +5,5 @@ Thanks to the people who have contributed fixes, testing, and improvements to Co
 - [dorokuma](https://github.com/dorokuma)
   - Fixed Android on-screen keyboard behavior for TUI apps in `conduit_vt`.
   - Fixed terminal layout distortion on app resume.
-  - Added the Chinese README translation.
+  - Added README.zh.md, translation of README.md.
+  - Updated Readme.zh.md to include acknowledgments etc.
