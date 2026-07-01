@@ -246,72 +246,140 @@ class _HostsPageState extends State<HostsPage> {
 
     final filteredHosts = _filteredHosts(controller.sortedHosts);
     final tags = _tagsFor(controller.hosts);
+    final isFiltered = _query.trim().isNotEmpty || _selectedTag != null;
+    final canReorder =
+        controller.sortMode == HostListSortMode.manual && !isFiltered;
 
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 120),
-      sliver: SliverList(
-        delegate: SliverChildListDelegate.fixed([
-          const _MachineSectionHeader(),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: HostSearchField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _query = value),
-                  hasContent: _query.isNotEmpty || _selectedTag != null,
-                  onClear: _clearFilters,
+      sliver: SliverMainAxisGroup(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _MachineSectionHeader(),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: HostSearchField(
+                        controller: _searchController,
+                        onChanged: (value) => setState(() => _query = value),
+                        hasContent: _query.isNotEmpty || _selectedTag != null,
+                        onClear: _clearFilters,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _HostSortMenu(
+                      value: controller.sortMode,
+                      onChanged: widget.hostsController.setSortMode,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              _HostSortMenu(
-                value: controller.sortMode,
-                onChanged: widget.hostsController.setSortMode,
-              ),
-            ],
-          ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            TagFilterBar(
-              tags: tags,
-              selectedTag: _selectedTag,
-              onSelected: (tag) {
-                setState(() {
-                  _selectedTag = _selectedTag == tag ? null : tag;
-                });
-              },
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  TagFilterBar(
+                    tags: tags,
+                    selectedTag: _selectedTag,
+                    onSelected: (tag) {
+                      setState(() {
+                        _selectedTag = _selectedTag == tag ? null : tag;
+                      });
+                    },
+                  ),
+                ],
+                const SizedBox(height: 16),
+              ],
             ),
-          ],
-          const SizedBox(height: 16),
+          ),
           if (filteredHosts.isEmpty)
-            MessageState(
-              icon: Icons.search_off,
-              title: 'No matches',
-              message: 'Try a different search or clear filters.',
-              actionLabel: 'Clear',
-              onAction: _clearFilters,
+            SliverToBoxAdapter(
+              child: MessageState(
+                icon: Icons.search_off,
+                title: 'No matches',
+                message: 'Try a different search or clear filters.',
+                actionLabel: 'Clear',
+                onAction: _clearFilters,
+              ),
+            )
+          else if (canReorder)
+            SliverReorderableList(
+              itemCount: filteredHosts.length,
+              onReorderItem: widget.hostsController.reorderManual,
+              proxyDecorator: _reorderProxyDecorator,
+              itemBuilder: (context, index) {
+                final host = filteredHosts[index];
+                return Padding(
+                  key: ValueKey(host.id),
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _buildHostCard(
+                    host,
+                    dragHandle: ReorderableDragStartListener(
+                      index: index,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4),
+                        child: Icon(Icons.drag_handle_rounded),
+                      ),
+                    ),
+                  ),
+                );
+              },
             )
           else
-            for (final host in filteredHosts) ...[
-              HostCard(
-                host: host,
-                active: widget.workspaceController.sessions.any(
-                  (session) => session.host.id == host.id,
-                ),
-                selectedTag: _selectedTag,
-                onConnect: () => _connect(host),
-                onAction: (action) => _handleHostAction(action, host),
-                onTagTap: (tag) {
-                  setState(() {
-                    _selectedTag = _selectedTag == tag ? null : tag;
-                  });
-                },
-              ),
-              const SizedBox(height: 8),
-            ],
-        ]),
+            SliverList.list(
+              children: [
+                for (final host in filteredHosts) ...[
+                  _buildHostCard(host),
+                  const SizedBox(height: 8),
+                ],
+              ],
+            ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildHostCard(SavedHost host, {Widget? dragHandle}) {
+    return HostCard(
+      host: host,
+      active: widget.workspaceController.sessions.any(
+        (session) => session.host.id == host.id,
+      ),
+      selectedTag: _selectedTag,
+      onConnect: () => _connect(host),
+      onAction: (action) => _handleHostAction(action, host),
+      onTagTap: (tag) {
+        setState(() {
+          _selectedTag = _selectedTag == tag ? null : tag;
+        });
+      },
+      dragHandle: dragHandle,
+    );
+  }
+
+  Widget _reorderProxyDecorator(
+    Widget child,
+    int index,
+    Animation<double> animation,
+  ) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final lift = Curves.easeOut.transform(animation.value);
+        return Transform.scale(
+          scale: 1 + (0.015 * lift),
+          child: Material(
+            color: Colors.transparent,
+            elevation: 8 * lift,
+            shadowColor: Colors.black.withValues(alpha: 0.22),
+            borderRadius: BorderRadius.circular(14),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 
@@ -588,11 +656,13 @@ extension on HostListSortMode {
     HostListSortMode.lastConnected => 'Last connected',
     HostListSortMode.name => 'Name',
     HostListSortMode.added => 'Added',
+    HostListSortMode.manual => 'Manual',
   };
 
   IconData get icon => switch (this) {
     HostListSortMode.lastConnected => Icons.schedule_rounded,
     HostListSortMode.name => Icons.sort_by_alpha_rounded,
     HostListSortMode.added => Icons.playlist_add_check_rounded,
+    HostListSortMode.manual => Icons.drag_indicator_rounded,
   };
 }

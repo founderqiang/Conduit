@@ -10,6 +10,7 @@ class SecureSavedHostsRepository implements SavedHostsRepository {
 
   static const _hostsKey = 'conduit.saved_hosts.v1';
   static const _sortModeKey = 'conduit.host_list_sort_mode.v1';
+  static const _manualOrderKey = 'conduit.host_list_manual_order.v1';
 
   final FlutterSecureStorage _storage;
 
@@ -55,5 +56,28 @@ class SecureSavedHostsRepository implements SavedHostsRepository {
   @override
   Future<void> saveSortMode(HostListSortMode mode) async {
     await _storage.write(key: _sortModeKey, value: mode.name);
+  }
+
+  @override
+  Future<List<String>> loadManualOrder() async {
+    final rawOrder = await _storage.read(key: _manualOrderKey);
+    if (rawOrder == null || rawOrder.isEmpty) {
+      return const [];
+    }
+
+    try {
+      final decoded = jsonDecode(rawOrder);
+      if (decoded is! List) {
+        return const [];
+      }
+      return decoded.whereType<String>().toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> saveManualOrder(List<String> hostIds) async {
+    await _storage.write(key: _manualOrderKey, value: jsonEncode(hostIds));
   }
 }

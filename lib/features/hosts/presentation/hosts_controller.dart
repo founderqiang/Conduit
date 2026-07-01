@@ -11,6 +11,7 @@ class HostsController extends ChangeNotifier {
   List<SavedHost> _hosts = const [];
   List<SavedHost>? _sortedHostsCache;
   HostListSortMode _sortMode = HostListSortMode.lastConnected;
+  List<String> _manualOrder = const [];
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -30,6 +31,7 @@ class HostsController extends ChangeNotifier {
     try {
       final hosts = await _repository.loadHosts();
       _sortMode = await _repository.loadSortMode();
+      _manualOrder = await _repository.loadManualOrder();
       _setHosts(hosts);
     } on AppFailure catch (failure) {
       _errorMessage = failure.toString();
@@ -43,12 +45,46 @@ class HostsController extends ChangeNotifier {
 
   Future<void> setSortMode(HostListSortMode mode) async {
     if (mode == _sortMode) return;
+
+    final seedManualOrder =
+        mode == HostListSortMode.manual && _manualOrder.isEmpty;
+    if (seedManualOrder) {
+      _manualOrder = sortedHosts.map((host) => host.id).toList();
+    }
+
     _sortMode = mode;
     _sortedHostsCache = null;
     notifyListeners();
 
     try {
       await _repository.saveSortMode(mode);
+      if (seedManualOrder) {
+        await _repository.saveManualOrder(_manualOrder);
+      }
+    } on AppFailure catch (failure) {
+      _errorMessage = failure.toString();
+      notifyListeners();
+    } catch (error) {
+      _errorMessage = error.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> reorderManual(int oldIndex, int newIndex) async {
+    final ordered = [...sortedHosts];
+    if (oldIndex < 0 || oldIndex >= ordered.length) return;
+    newIndex = newIndex.clamp(0, ordered.length - 1);
+    if (oldIndex == newIndex) return;
+
+    final moved = ordered.removeAt(oldIndex);
+    ordered.insert(newIndex, moved);
+    _manualOrder = ordered.map((host) => host.id).toList();
+    _sortMode = HostListSortMode.manual;
+    _sortedHostsCache = null;
+    notifyListeners();
+
+    try {
+      await _repository.saveManualOrder(_manualOrder);
     } on AppFailure catch (failure) {
       _errorMessage = failure.toString();
       notifyListeners();
@@ -115,8 +151,28 @@ class HostsController extends ChangeNotifier {
         sorted.sort(_compareName);
       case HostListSortMode.added:
         break;
+      case HostListSortMode.manual:
+        return _computeManualOrder();
     }
     return List.unmodifiable(sorted);
+  }
+
+  List<SavedHost> _computeManualOrder() {
+    final byId = {for (final host in _hosts) host.id: host};
+    final ordered = <SavedHost>[];
+    final seen = <String>{};
+    for (final id in _manualOrder) {
+      final host = byId[id];
+      if (host != null && seen.add(id)) {
+        ordered.add(host);
+      }
+    }
+    for (final host in _hosts) {
+      if (seen.add(host.id)) {
+        ordered.add(host);
+      }
+    }
+    return List.unmodifiable(ordered);
   }
 
   int _compareLastConnected(SavedHost a, SavedHost b) {

@@ -130,11 +130,18 @@ class EmptyHostsRepository implements SavedHostsRepository {
 
   @override
   Future<void> saveSortMode(HostListSortMode mode) async {}
+
+  @override
+  Future<List<String>> loadManualOrder() async => const [];
+
+  @override
+  Future<void> saveManualOrder(List<String> hostIds) async {}
 }
 
 class FakeHostsRepository implements SavedHostsRepository {
   List<SavedHost> persisted = [];
   HostListSortMode persistedSortMode = HostListSortMode.lastConnected;
+  List<String> persistedManualOrder = [];
 
   @override
   Future<List<SavedHost>> loadHosts() async => List.unmodifiable(persisted);
@@ -150,6 +157,15 @@ class FakeHostsRepository implements SavedHostsRepository {
   @override
   Future<void> saveSortMode(HostListSortMode mode) async {
     persistedSortMode = mode;
+  }
+
+  @override
+  Future<List<String>> loadManualOrder() async =>
+      List.unmodifiable(persistedManualOrder);
+
+  @override
+  Future<void> saveManualOrder(List<String> hostIds) async {
+    persistedManualOrder = List.of(hostIds);
   }
 }
 

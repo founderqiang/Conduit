@@ -1,0 +1,1 @@
+Manual sort: drag saved machines into a custom order that Conduit remembers.

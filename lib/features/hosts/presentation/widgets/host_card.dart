@@ -11,6 +11,7 @@ class HostCard extends StatelessWidget {
     required this.onConnect,
     required this.onAction,
     required this.onTagTap,
+    this.dragHandle,
     super.key,
   });
 
@@ -20,6 +21,7 @@ class HostCard extends StatelessWidget {
   final VoidCallback onConnect;
   final ValueChanged<HostAction> onAction;
   final ValueChanged<String> onTagTap;
+  final Widget? dragHandle;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +122,19 @@ class HostCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (dragHandle != null)
+                    SizedBox(
+                      height: 36,
+                      child: Center(
+                        child: IconTheme.merge(
+                          data: IconThemeData(
+                            color: colorScheme.onSurfaceVariant,
+                            size: 22,
+                          ),
+                          child: dragHandle!,
+                        ),
+                      ),
+                    ),
                   SizedBox(
                     width: 36,
                     height: 36,

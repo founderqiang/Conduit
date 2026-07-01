@@ -537,6 +537,69 @@ void main() {
       expect(repository.persistedSortMode, HostListSortMode.name);
       expect(controller.sortMode, HostListSortMode.name);
     });
+
+    test('seeds manual order from the current arrangement', () async {
+      final repository = FakeHostsRepository()
+        ..persistedSortMode = HostListSortMode.name
+        ..persisted = [
+          buildHost('c').copyWith(name: 'Gamma'),
+          buildHost('a').copyWith(name: 'Alpha'),
+          buildHost('b').copyWith(name: 'Beta'),
+        ];
+      final controller = HostsController(repository);
+      await controller.load();
+
+      await controller.setSortMode(HostListSortMode.manual);
+
+      expect(controller.sortedHosts.map((host) => host.name), [
+        'Alpha',
+        'Beta',
+        'Gamma',
+      ]);
+      expect(repository.persistedManualOrder, ['a', 'b', 'c']);
+    });
+
+    test('reorders and persists the manual order', () async {
+      final repository = FakeHostsRepository()
+        ..persistedSortMode = HostListSortMode.manual
+        ..persistedManualOrder = ['a', 'b', 'c']
+        ..persisted = [
+          buildHost('a').copyWith(name: 'Alpha'),
+          buildHost('b').copyWith(name: 'Beta'),
+          buildHost('c').copyWith(name: 'Gamma'),
+        ];
+      final controller = HostsController(repository);
+      await controller.load();
+
+      await controller.reorderManual(0, 2);
+
+      expect(controller.sortedHosts.map((host) => host.name), [
+        'Beta',
+        'Gamma',
+        'Alpha',
+      ]);
+      expect(repository.persistedManualOrder, ['b', 'c', 'a']);
+    });
+
+    test('appends newly added hosts to the end of the manual order', () async {
+      final repository = FakeHostsRepository()
+        ..persistedSortMode = HostListSortMode.manual
+        ..persistedManualOrder = ['b', 'a']
+        ..persisted = [
+          buildHost('a').copyWith(name: 'Alpha'),
+          buildHost('b').copyWith(name: 'Beta'),
+        ];
+      final controller = HostsController(repository);
+      await controller.load();
+
+      await controller.upsert(buildHost('c').copyWith(name: 'Gamma'));
+
+      expect(controller.sortedHosts.map((host) => host.name), [
+        'Beta',
+        'Alpha',
+        'Gamma',
+      ]);
+    });
   });
 }
 
