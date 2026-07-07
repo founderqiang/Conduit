@@ -291,6 +291,7 @@ class HostAdvancedSection extends StatelessWidget {
     required this.tagFocusNode,
     required this.timeoutController,
     required this.moshLocaleController,
+    required this.moshPortsController,
     required this.tmuxSessionNameController,
     required this.tmuxStartDirectoryController,
     required this.useMosh,
@@ -298,6 +299,7 @@ class HostAdvancedSection extends StatelessWidget {
     required this.startTmuxOnConnect,
     required this.tmuxPrefixKey,
     required this.timeoutValidator,
+    required this.moshPortsValidator,
     required this.onAddTag,
     required this.onRemoveTag,
     required this.onUseMoshChanged,
@@ -312,6 +314,7 @@ class HostAdvancedSection extends StatelessWidget {
   final FocusNode tagFocusNode;
   final TextEditingController timeoutController;
   final TextEditingController moshLocaleController;
+  final TextEditingController moshPortsController;
   final TextEditingController tmuxSessionNameController;
   final TextEditingController tmuxStartDirectoryController;
   final bool useMosh;
@@ -319,6 +322,7 @@ class HostAdvancedSection extends StatelessWidget {
   final bool startTmuxOnConnect;
   final TmuxPrefixKey tmuxPrefixKey;
   final FormFieldValidator<String> timeoutValidator;
+  final FormFieldValidator<String> moshPortsValidator;
   final ValueChanged<String> onAddTag;
   final ValueChanged<String> onRemoveTag;
   final ValueChanged<bool> onUseMoshChanged;
@@ -375,6 +379,23 @@ class HostAdvancedSection extends StatelessWidget {
               helperText: 'Must be a UTF-8 locale installed on the host.',
               prefixIcon: Icon(Icons.language_outlined),
             ),
+            autocorrect: false,
+            enableSuggestions: false,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: moshPortsController,
+            decoration: const InputDecoration(
+              labelText: 'Mosh UDP ports',
+              helperText:
+                  'Port or range like 60000:61000. Empty uses 60001:60999.',
+              prefixIcon: Icon(Icons.settings_ethernet_rounded),
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9:]')),
+            ],
+            validator: moshPortsValidator,
             autocorrect: false,
             enableSuggestions: false,
             textInputAction: TextInputAction.next,
