@@ -181,6 +181,7 @@ class HostAuthenticationSection extends StatelessWidget {
             decoration: InputDecoration(
               labelText: 'Password',
               helperText: 'Use this for password-only SSH login.',
+              helperMaxLines: 2,
               prefixIcon: const Icon(Icons.key_outlined),
               suffixIcon: IconButton(
                 tooltip: showPassword ? 'Hide' : 'Show',
@@ -224,6 +225,7 @@ class HostAuthenticationSection extends StatelessWidget {
             decoration: const InputDecoration(
               labelText: 'Private key',
               helperText: 'Import, paste, or generate a key.',
+              helperMaxLines: 2,
               alignLabelWithHint: true,
               prefixIcon: Padding(
                 padding: EdgeInsets.only(top: 12),
@@ -248,6 +250,7 @@ class HostAuthenticationSection extends StatelessWidget {
             decoration: InputDecoration(
               labelText: 'Key passphrase',
               helperText: 'Leave empty for an unencrypted key.',
+              helperMaxLines: 2,
               prefixIcon: const Icon(Icons.shield_outlined),
               suffixIcon: IconButton(
                 tooltip: showPassphrase ? 'Hide' : 'Show',
@@ -377,6 +380,7 @@ class HostAdvancedSection extends StatelessWidget {
             decoration: const InputDecoration(
               labelText: 'Mosh locale',
               helperText: 'Must be a UTF-8 locale installed on the host.',
+              helperMaxLines: 2,
               prefixIcon: Icon(Icons.language_outlined),
             ),
             autocorrect: false,
@@ -390,6 +394,8 @@ class HostAdvancedSection extends StatelessWidget {
               labelText: 'Mosh UDP ports',
               helperText:
                   'Port or range like 60000:61000. Empty uses 60001:60999.',
+              helperMaxLines: 2,
+              errorMaxLines: 2,
               prefixIcon: Icon(Icons.settings_ethernet_rounded),
             ),
             inputFormatters: [
@@ -435,6 +441,7 @@ class HostAdvancedSection extends StatelessWidget {
               labelText: 'Tmux session name',
               hintText: defaultTmuxSessionName,
               helperText: 'Conduit attaches to this session, or creates it.',
+              helperMaxLines: 2,
               prefixIcon: Icon(Icons.view_stream_outlined),
             ),
             autocorrect: false,
@@ -464,6 +471,7 @@ class HostAdvancedSection extends StatelessWidget {
           decoration: const InputDecoration(
             labelText: 'Tmux prefix',
             helperText: 'Used by the Tmux and Tmux+ key-row buttons.',
+            helperMaxLines: 2,
             prefixIcon: Icon(Icons.keyboard_command_key_rounded),
           ),
           items: [

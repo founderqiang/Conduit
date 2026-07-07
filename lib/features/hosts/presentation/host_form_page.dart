@@ -606,6 +606,7 @@ class _HostFormPageState extends State<HostFormPage> {
               decoration: const InputDecoration(
                 labelText: 'Label',
                 helperText: 'Shown as the key comment.',
+                helperMaxLines: 2,
               ),
               textInputAction: TextInputAction.next,
             ),
